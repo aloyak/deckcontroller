@@ -3,6 +3,8 @@
 #include <SDL3/SDL_main.h>
 #include <string>
 
+#include "data.h"
+
 int main(int argc, char* argv[]) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         return 1;
@@ -17,6 +19,7 @@ int main(int argc, char* argv[]) {
     SDL_Gamepad* gamepad = nullptr;
     bool quit = false;
     SDL_Event event;
+    ControllerState state = {};
 
     float last_axis_x = 0.0f;
     bool south_pressed = false;
