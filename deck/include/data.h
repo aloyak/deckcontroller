@@ -1,4 +1,4 @@
-#ifdef CONTROLLER_DATA_H
+#ifndef CONTROLLER_DATA_H
 #define CONTROLLER_DATA_H
 
 #include <stdint.h>
@@ -12,6 +12,6 @@ struct ControllerState
     int16_t rightY;
     uint8_t leftTrigger;
     uint8_t rightTrigger;
-}
+};
 
 #endif
