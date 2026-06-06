@@ -8,10 +8,17 @@ add_executable(driver
     src/main.cpp
 )
 
-target_link_libraries(driver PRIVATE SDL3::SDL3)
+target_link_libraries(driver PRIVATE SDL3::SDL3 imgui)
 
 target_include_directories(driver PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# copy the resources folder to the output directory
+add_custom_command(TARGET driver POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+        $<TARGET_FILE_DIR:driver>/resources
 )
 
 # TODO: check for complete windows support
