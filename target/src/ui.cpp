@@ -174,81 +174,276 @@ void RenderControllerWindow(const ControllerSnapshot& snapshot, ImGuiIO& io,
                           (snapshot.state.buttons >> 14) & 1, {60, 42}); // START
     }
 
-    ImGui::Separator();
-    ImGui::Spacing();
+    const float panelPadX = 12.0f;
+    const float panelPadY = 8.0f;
+    const ImVec4 kHeaderCol = ImVec4(0.55f, 0.55f, 0.65f, 1.0f);
 
-    ImGui::BeginChild("##sticks", {0, 120}, false);
-    ImGui::BeginGroup();
-    ImGui::TextDisabled("AXES (raw)");
-    ImGui::Spacing();
-    ImGui::Text("LX  %+6d", snapshot.state.leftX);
-    ImGui::Text("LY  %+6d", snapshot.state.leftY);
-    ImGui::Text("RX  %+6d", snapshot.state.rightX);
-    ImGui::Text("RY  %+6d", snapshot.state.rightY);
-    ImGui::EndGroup();
-    ImGui::EndChild();
-
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    ImGui::TextDisabled("TRIGGERS");
-    ImGui::Spacing();
-    ImGui::Text("LT  %3u", snapshot.state.leftTrigger);
-    ImGui::Text("RT  %3u", snapshot.state.rightTrigger);
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // Buttons grid (bits 0..14)
-    ImGui::TextDisabled("BUTTONS  (bitmask: %04u)", snapshot.state.buttons);
-    ImGui::Spacing();
-    const char* btnLabels[14] = {
-        "A", "B", "X", "Y",    // 0-3
-        "LB", "RB", "LSTICK", "RSTICK", // 4-7
-        "DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT", // 8-11
-        "MENU", "START" // 12-14
+    auto SectionHeader = [&](const char* icon, const char* title, const char* subtitle = nullptr) {
+        ImGui::Spacing();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        ImGui::TextColored(kHeaderCol, "%s  %s", icon, title);
+        if (subtitle) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("-  %s", subtitle);
+        }
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        ImGui::Spacing();
     };
-    const int cols = 4;
-    const ImVec2 btnSize = {72, 36};
-    for (int i = 0; i < 14; ++i) {
-        const bool pressed = (snapshot.state.buttons >> i) & 1;
-        const ImVec4 col = pressed ? ImVec4(0.54f, 0.43f, 0.54f, 1.0f)
-                                   : ImVec4(0.18f, 0.18f, 0.22f, 1.0f);
-        const ImVec4 text = pressed ? ImVec4(0, 0, 0, 1) : ImVec4(0.4f, 0.4f, 0.5f, 1.0f);
 
-        ImGui::PushStyleColor(ImGuiCol_Button, col);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, col);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, col);
-        ImGui::PushStyleColor(ImGuiCol_Text, text);
-        ImGui::Button(btnLabels[i], btnSize);
+    auto Padded = [&](auto fn) {
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        fn();
+    };
+
+    ImGui::Separator();
+
+    SectionHeader("", "AXES", "normalised ·  range  -32768 → +32767");
+
+    auto DrawAxisBar = [&](const char* label, const char* desc, float norm) {
+        constexpr float barWidth  = 160.0f;
+        constexpr float barHeight = 10.0f;
+
+        const float fill = (norm + 1.0f) * 0.5f;
+        ImDrawList* dl   = ImGui::GetWindowDrawList();
+
+        const ImU32 trackCol  = ImGui::GetColorU32(ImVec4(0.12f, 0.12f, 0.16f, 1.0f));
+        const ImU32 fillCol   = ImGui::GetColorU32(ImVec4(0.45f, 0.45f, 0.95f, 0.9f));
+        const ImU32 centerCol = ImGui::GetColorU32(ImVec4(0.35f, 0.35f, 0.45f, 1.0f));
+        const ImU32 knobCol   = ImGui::GetColorU32(ImVec4(0.75f, 0.75f, 1.0f,  1.0f));
+
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        const ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+
+        const ImVec2 trackMin = cursorPos;
+        const ImVec2 trackMax = { cursorPos.x + barWidth, cursorPos.y + barHeight };
+        const float  midX     = cursorPos.x + barWidth * 0.5f;
+        const float  fillX    = cursorPos.x + barWidth * fill;
+
+        dl->AddRectFilled(trackMin, trackMax, trackCol, barHeight);
+        if (fill >= 0.5f)
+            dl->AddRectFilled({ midX, trackMin.y }, { fillX, trackMax.y }, fillCol, barHeight);
+        else
+            dl->AddRectFilled({ fillX, trackMin.y }, { midX, trackMax.y }, fillCol, barHeight);
+        dl->AddLine({ midX, trackMin.y }, { midX, trackMax.y }, centerCol, 1.5f);
+        dl->AddCircleFilled({ fillX, cursorPos.y + barHeight * 0.5f }, barHeight * 0.65f, knobCol, 12);
+
+        ImGui::Dummy({ barWidth + 4.0f, barHeight });
+        ImGui::SameLine(0, 10);
+        ImGui::Text("%-4s", label);
+        ImGui::SameLine(0, 6);
+        ImGui::TextColored(ImVec4(0.45f, 0.45f, 0.95f, 1.0f), "%+6.0f", norm * 32768.0f);
+        ImGui::SameLine(0, 10);
+        ImGui::TextDisabled("%s", desc);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        ImGui::Spacing();
+    };
+
+    DrawAxisBar("LX", "left stick  ·  horizontal", std::clamp(snapshot.state.leftX  / 32768.0f, -1.0f, 1.0f));
+    DrawAxisBar("LY", "left stick  ·  vertical",   std::clamp(snapshot.state.leftY  / 32768.0f, -1.0f, 1.0f));
+    DrawAxisBar("RX", "right stick  ·  horizontal", std::clamp(snapshot.state.rightX / 32768.0f, -1.0f, 1.0f));
+    DrawAxisBar("RY", "right stick  ·  vertical",   std::clamp(snapshot.state.rightY / 32768.0f, -1.0f, 1.0f));
+
+    // ── Triggers ─────────────────────────────────────────────────────────────
+    ImGui::Spacing();
+    ImGui::Separator();
+
+    SectionHeader("", "TRIGGERS", "analog  ·  range  0 → 255");
+
+    auto DrawTriggerBar = [&](const char* label, const char* desc, uint8_t value) {
+        constexpr float barWidth  = 160.0f;
+        constexpr float barHeight = 10.0f;
+
+        const float  fill = value / 255.0f;
+        ImDrawList*  dl   = ImGui::GetWindowDrawList();
+
+        const ImU32 trackCol = ImGui::GetColorU32(ImVec4(0.12f, 0.12f, 0.16f, 1.0f));
+        const ImU32 fillCol  = ImGui::GetColorU32(ImVec4(0.45f, 0.85f, 0.65f, 0.9f));
+        const ImU32 knobCol  = ImGui::GetColorU32(ImVec4(0.65f, 1.0f,  0.8f,  1.0f));
+
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        const ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+
+        const ImVec2 trackMin = cursorPos;
+        const ImVec2 trackMax = { cursorPos.x + barWidth, cursorPos.y + barHeight };
+        const float  fillX    = cursorPos.x + barWidth * fill;
+
+        dl->AddRectFilled(trackMin, trackMax, trackCol, barHeight);
+        dl->AddRectFilled(trackMin, { fillX, trackMax.y }, fillCol, barHeight);
+        dl->AddCircleFilled({ fillX, cursorPos.y + barHeight * 0.5f }, barHeight * 0.65f, knobCol, 12);
+
+        ImGui::Dummy({ barWidth + 4.0f, barHeight });
+        ImGui::SameLine(0, 10);
+        ImGui::Text("%-4s", label);
+        ImGui::SameLine(0, 6);
+        ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.65f, 1.0f), "%3u", value);
+        ImGui::SameLine(0, 10);
+        ImGui::TextDisabled("%s", desc);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+        ImGui::Spacing();
+    };
+
+    DrawTriggerBar("LT", "left trigger",  snapshot.state.leftTrigger);
+    DrawTriggerBar("RT", "right trigger", snapshot.state.rightTrigger);
+
+    ImGui::Spacing();
+    ImGui::Separator();
+
+    char buttonSubtitle[48];
+    snprintf(buttonSubtitle, sizeof(buttonSubtitle), "digital  ·  bitmask  0x%04X", snapshot.state.buttons);
+    SectionHeader("", "BUTTONS", buttonSubtitle);
+
+    struct ButtonDef { const char* label; int bit; const char* tooltip; };
+    constexpr ButtonDef kButtons[] = {
+        {"A",    0,  "Face — confirm"},
+        {"B",    1,  "Face — cancel"},
+        {"X",    2,  "Face — action"},
+        {"Y",    3,  "Face — action"},
+        {"LB",   4,  "Left shoulder"},
+        {"RB",   5,  "Right shoulder"},
+        {"L3",   6,  "Left stick click"},
+        {"R3",   7,  "Right stick click"},
+        {"↑",    8,  "D-pad up"},
+        {"↓",    9,  "D-pad down"},
+        {"←",   10,  "D-pad left"},
+        {"→",   11,  "D-pad right"},
+        {"MENU",   12,  "Menu"},
+        {"START",   14,  "Start"},
+    };
+
+    constexpr int    kCols   = 4;
+    const     ImVec2 btnSize = { 68.0f, 30.0f };
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   ImVec2(6.0f, 6.0f));
+
+    for (int i = 0; i < IM_ARRAYSIZE(kButtons); ++i) {
+        const bool   pressed = (snapshot.state.buttons >> kButtons[i].bit) & 1;
+        const ImVec4 bgCol   = pressed ? ImVec4(0.45f, 0.45f, 0.95f, 1.0f) : ImVec4(0.16f, 0.16f, 0.20f, 1.0f);
+        const ImVec4 textCol = pressed ? ImVec4(1.0f,  1.0f,  1.0f,  1.0f) : ImVec4(0.45f, 0.45f, 0.55f, 1.0f);
+
+        if (i % kCols == 0)
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+
+        ImGui::PushStyleColor(ImGuiCol_Button,        bgCol);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bgCol);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  bgCol);
+        ImGui::PushStyleColor(ImGuiCol_Text,          textCol);
+        ImGui::Button(kButtons[i].label, btnSize);
         ImGui::PopStyleColor(4);
 
-        if ((i + 1) % cols != 0 && i != 14) {
-            ImGui::SameLine(0, 8);
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::TextDisabled("bit %d", kButtons[i].bit);
+            ImGui::SameLine(0, 6);
+            ImGui::TextUnformatted(kButtons[i].tooltip);
+            ImGui::EndTooltip();
         }
+
+        if ((i + 1) % kCols != 0 && i != IM_ARRAYSIZE(kButtons) - 1)
+            ImGui::SameLine();
     }
 
+    ImGui::PopStyleVar(2);
+
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::Spacing();
 
-    ImGui::TextDisabled("D-PAD");
+    SectionHeader("", "D-PAD", "directional  ·  bits 8 – 11");
 
-    const char* dpadStates[4] = {
-        (snapshot.state.buttons >> 8) & 1 ? "UP" : "up",
-        (snapshot.state.buttons >> 9) & 1 ? "DOWN" : "down",
-        (snapshot.state.buttons >> 10) & 1 ? "LEFT" : "left",
-        (snapshot.state.buttons >> 11) & 1 ? "RIGHT" : "right",
+    auto DpadBtn = [&](const char* label, int bit) {
+        const bool   pressed = (snapshot.state.buttons >> bit) & 1;
+        const ImVec4 col     = pressed ? ImVec4(0.45f, 0.45f, 0.95f, 1.0f) : ImVec4(0.16f, 0.16f, 0.20f, 1.0f);
+        const ImVec4 text    = pressed ? ImVec4(1.0f,  1.0f,  1.0f,  1.0f) : ImVec4(0.45f, 0.45f, 0.55f, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button,        col);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, col);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  col);
+        ImGui::PushStyleColor(ImGuiCol_Text,          text);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+        ImGui::Button(label, { 38.0f, 30.0f });
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor(4);
     };
 
-    ImGui::Text("%s  %s  %s  %s", dpadStates[0], dpadStates[1], dpadStates[2], dpadStates[3]);
+    constexpr float kBtnW    = 38.0f;
+    constexpr float kBtnH    = 30.0f;
+    constexpr float kBtnGap  = 4.0f;
+    const     float kStride  = kBtnW + kBtnGap;
+    const     float kOriginX = ImGui::GetCursorPosX() + panelPadX;
 
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { kBtnGap, kBtnGap });
+
+    ImGui::SetCursorPosX(kOriginX);
+    ImGui::Dummy({ kBtnW, kBtnH }); ImGui::SameLine();
+    DpadBtn("↑", 8);                ImGui::SameLine();
+    ImGui::Dummy({ kBtnW, kBtnH });
+
+    ImGui::SetCursorPosX(kOriginX);
+    DpadBtn("←", 10); ImGui::SameLine();
+    {
+        // Centre pip
+        const ImVec2 p = ImGui::GetCursorScreenPos();
+        ImGui::Dummy({ kBtnW, kBtnH });
+        ImGui::GetWindowDrawList()->AddCircleFilled(
+            { p.x + kBtnW * 0.5f, p.y + kBtnH * 0.5f }, 4.0f,
+            ImGui::GetColorU32(ImVec4(0.25f, 0.25f, 0.30f, 1.0f)), 12);
+    }
+    ImGui::SameLine();
+    DpadBtn("→", 11); ImGui::SameLine(0, 16);
+
+    {
+        const bool up    = (snapshot.state.buttons >> 8)  & 1;
+        const bool down  = (snapshot.state.buttons >> 9)  & 1;
+        const bool left  = (snapshot.state.buttons >> 10) & 1;
+        const bool right = (snapshot.state.buttons >> 11) & 1;
+
+        const char* dirLabel = "NEUTRAL";
+        if      (up   && left)  dirLabel = "UP-LEFT";
+        else if (up   && right) dirLabel = "UP-RIGHT";
+        else if (down && left)  dirLabel = "DOWN-LEFT";
+        else if (down && right) dirLabel = "DOWN-RIGHT";
+        else if (up)            dirLabel = "UP";
+        else if (down)          dirLabel = "DOWN";
+        else if (left)          dirLabel = "LEFT";
+        else if (right)         dirLabel = "RIGHT";
+
+        const bool   anyPressed = up || down || left || right;
+        const ImVec4 labelCol   = anyPressed
+            ? ImVec4(0.45f, 0.45f, 0.95f, 1.0f)
+            : ImVec4(0.35f, 0.35f, 0.40f, 1.0f);
+
+        // Vertically center the text against the 3-row cross (3 * stride high)
+        const float crossHeight = kBtnH * 3 + kBtnGap * 2;
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - kBtnH - kBtnGap + (crossHeight - ImGui::GetTextLineHeight()) * 0.5f);
+        ImGui::TextColored(labelCol, "%s", dirLabel);
+    }
+
+    // Row 3: [ ] [↓] [ ]
+    ImGui::SetCursorPosX(kOriginX);
+    ImGui::Dummy({ kBtnW, kBtnH }); ImGui::SameLine();
+    DpadBtn("↓", 9);                ImGui::SameLine();
+    ImGui::Dummy({ kBtnW, kBtnH });
+
+    ImGui::PopStyleVar(); // ItemSpacing
+
+    // ── Status bar ────────────────────────────────────────────────────────────
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
-    ImGui::TextDisabled("UDP: 8080  |  %.0f FPS", io.Framerate);
+    const bool fresh = IsSignalFresh(snapshot);
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + panelPadX);
+    ImGui::TextDisabled("UDP 8080");
+    ImGui::SameLine(0, 8);
+    ImGui::TextDisabled("|");
+    ImGui::SameLine(0, 8);
+    ImGui::TextColored(
+        fresh ? ImVec4(0.0f, 0.9f, 0.4f, 1.0f) : ImVec4(0.9f, 0.3f, 0.3f, 1.0f),
+        fresh ? "● LIVE" : "● STALE");
+    ImGui::SameLine(0, 8);
+    ImGui::TextDisabled("|");
+    ImGui::SameLine(0, 8);
+    ImGui::TextDisabled("%.0f FPS", io.Framerate);
+    ImGui::Spacing();
 
     ImGui::End();
 }
