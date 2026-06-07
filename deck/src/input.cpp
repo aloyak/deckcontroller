@@ -17,17 +17,26 @@ ControllerState InputManager::GetCurrentState() {
     if (!gamepad) return state;
 
     state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH) ? (1 << 0) : 0);
-    state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST) ? (1 << 1) : 0);
-    state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST) ? (1 << 2) : 0);
+    state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST)  ? (1 << 1) : 0);
+    state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST)  ? (1 << 2) : 0);
     state.buttons |= (SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_NORTH) ? (1 << 3) : 0);
-    
-    state.leftX = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
-    state.leftY = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
+
+    state.leftX  = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
+    state.leftY  = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
     state.rightX = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX);
     state.rightY = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY);
-    
-    state.leftTrigger = (uint8_t)(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 256);
-    state.rightTrigger = (uint8_t)(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 256);
-    
+
+    state.leftTrigger  = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER)  >> 8;
+    state.rightTrigger = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) >> 8;
+
     return state;
+}
+
+void InputManager::OpenExisting() {
+    int count = 0;
+    SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
+    if (gamepads && count > 0) {
+        gamepad = SDL_OpenGamepad(gamepads[0]);
+    }
+    SDL_free(gamepads); 
 }

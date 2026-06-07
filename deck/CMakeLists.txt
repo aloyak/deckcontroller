@@ -4,6 +4,8 @@ include(SDL3)
 
 add_executable(deck
     src/main.cpp
+    src/network.cpp
+    src/input.cpp
 )
 
 target_link_libraries(deck PRIVATE SDL3::SDL3)

@@ -11,6 +11,7 @@ public:
     bool IsGamepadConnected() const { return gamepad != nullptr; }
     ControllerState GetCurrentState();
 
+    void OpenExisting();
 private: 
     SDL_Gamepad* gamepad;
 };
