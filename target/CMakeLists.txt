@@ -6,9 +6,11 @@ include(IMGUI)
 
 add_executable(driver
     src/main.cpp
+    src/network.cpp
+    src/ui.cpp
 )
 
-target_link_libraries(driver PRIVATE SDL3::SDL3 imgui)
+target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)
 
 target_include_directories(driver PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
