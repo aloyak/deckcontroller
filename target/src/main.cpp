@@ -11,6 +11,7 @@
 #include "network.h"
 #include "paths.h"
 #include "ui.h"
+#include "linux/driver.h"
 
 static SharedState g_shared;
 static std::atomic<bool> g_running{true};
@@ -73,6 +74,8 @@ int main() {
 
     std::thread netThread(RunNetworkLoop, std::ref(g_running), std::ref(g_shared), 8080);
 
+    Driver controllerDriver = Driver();
+
     while (true) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -81,6 +84,7 @@ int main() {
         }
 
         ControllerSnapshot snapshot = SnapshotState(g_shared);
+        controllerDriver.Run(snapshot);
 
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();

@@ -10,6 +10,12 @@ add_executable(driver
     src/ui.cpp
 )
 
+if(UNIX)
+    target_sources(driver PRIVATE
+        src/linux/driver.cpp
+    )
+endif()
+
 target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)
 
 target_include_directories(driver PRIVATE
