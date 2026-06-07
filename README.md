@@ -1,25 +1,40 @@
 # DeckController
 
-Use your steamdeck as a generic game controller on your PC through Wi-Fi (WIP) and USB (TODO, hopefully)
+Use your SteamDeck as a generic game controller on your PC through Wi-Fi and USB (TODO, hopefully) either in Windows or Linux with low latency and very high battery efficiency.
 
-Everything that runs in your deck is in the `deck` folder, same for the pc in the `target` folder
+This project is divided into two parts, the driver that runs on the PC (the `target` folder) and emulates a controller, and the client (the `deck` folder) that runs on the SteamDeck and sends the input data to the driver.
 
-It uses SDL3 for the controller input and network communication
+Uses SDL3 for the controller input and network communication, and ImGui for the UI on the PC side.
 
 ## Setup
 
-> WIP
+> Recommended to connect the deck to your PC through a hotspot if wifi is bad or unstable, but it should work on the same network as well
 
-**Steam Deck:**
+These are the steps to take to get it working for any platform (PLEASE READ):
 
-* Download the release and add it as a non-steam game to your steam library on the deck
-* Launch the program with steam compatibility layer
+First time:
 
-**PC:**
-
-* Download the release and run the executable
-* Launch it
-* Select your steam deck from the list
+1. Download the binaries for the steam deck side
+2. Add the deck's side as a non-steam game and make it run with proton (tested with proton 9.0)
+3. Run the PC side and then run the deck side, in that order or the PC won't find it
 
 
-From that point on, every time you open the program in your deck (from gaming or desktop modes) and your pc they should automatically connect
+* currently working for a faster and nicer way to setup
+
+From that point on:
+
+1. Run the driver on your PC
+2. Run the client on your deck
+
+> Using gaming mode is preferred but it works either way
+
+That's it!
+
+## Performance
+
+* **Latency:** From 1-5 ms + input delay up to 20 ms depending on the network, but it should be good enough for most games, consider using a hotspot on the PC
+
+* **Battery:** 6 hours of continuous use by default (check recommended settings)
+
+
+**Recommended Settings:** battery life goes up to 7 hours if frame limit is set to 10 FPS/Hz, Allow Tearing, Half Rate Shading ON, Set TDP Limit to minimum (3 Watts) and set the GPU clock to 200 Mhz. As tested these settings don't have a noticeable impact on the input latency, but they do reduce the battery consumption a little bit, remember to use per-game profiles!
