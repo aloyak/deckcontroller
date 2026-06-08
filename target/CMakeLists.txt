@@ -14,6 +14,10 @@ if(UNIX)
     target_sources(driver PRIVATE
         src/linux/driver.cpp
     )
+elseif(WIN32)
+    target_sources(driver PRIVATE
+        src/windows/driver.cpp
+    )
 endif()
 
 target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)

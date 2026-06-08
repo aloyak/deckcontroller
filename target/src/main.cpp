@@ -11,7 +11,12 @@
 #include "network.h"
 #include "paths.h"
 #include "ui.h"
-#include "linux/driver.h"
+
+#ifndef _WIN32
+    #include "linux/driver.h"
+#else
+    #include "windows/driver.h"
+#endif
 
 static SharedState g_shared;
 static std::atomic<bool> g_running{true};
