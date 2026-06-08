@@ -12,8 +12,6 @@ Uses SDL3 for the controller input and network communication, and ImGui for the 
 
 These are the steps to take to get it working for any platform (PLEASE READ):
 
-First time:
-
 1. Download the binaries for the steam deck side
 2. Add the deck's side as a non-steam game and make it run with proton (tested with proton 9.0)
 3. Run the PC side and then run the deck side, in that order or the PC won't find it
@@ -21,7 +19,7 @@ First time:
 
 * currently working for a faster and nicer way to setup
 
-From that point on:
+**From that point on:**
 
 1. Run the driver on your PC
 2. Run the client on your deck
