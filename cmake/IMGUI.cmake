@@ -6,7 +6,7 @@ FetchContent_Declare(
     GIT_TAG        docking
 )
 
-FetchContent_Populate(imgui)
+FetchContent_MakeAvailable(imgui)
 
 add_library(imgui STATIC)
 

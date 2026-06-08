@@ -39,5 +39,8 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:SDL3::SDL3>
             $<TARGET_FILE_DIR:driver>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL3_image::SDL3_image>
+            $<TARGET_FILE_DIR:driver>
     )
 endif()

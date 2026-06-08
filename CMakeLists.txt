@@ -7,5 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-add_subdirectory(deck)
-add_subdirectory(target)
+if(WIN32)
+	add_subdirectory(target)
+else()
+	add_subdirectory(deck)
+	add_subdirectory(target)
+endif()
