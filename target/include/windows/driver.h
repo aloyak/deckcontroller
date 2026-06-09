@@ -1,22 +1,23 @@
 #pragma once
- 
-#include "state.h"
- 
-// vJoy public header — comes with the vJoy SDK (drop public.h next to this file)
-// SDK: https://github.com/jshafer817/vJoy  or the installer's SDK folder
-#include "public.h"
 
-// WIP driver
+#include "state.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <public.h>
+#include <vjoyinterface.h>
 
 class Driver {
 public:
-    explicit Driver(UINT deviceID = 1);
+    explicit Driver(UINT deviceId = 1);
     ~Driver();
 
-    Driver(const &Driveer) = delete;
-    Driver& operator=(const &Driver) = delete;
+    // Disabled copy — device handle is not shareable
+    Driver(const Driver&) = delete;
+    Driver& operator=(const Driver&) = delete;
 
     void Run(ControllerSnapshot snapshot);
+
 private:
-    UINT deviceID;
+    UINT deviceId;
 };

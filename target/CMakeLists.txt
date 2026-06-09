@@ -24,7 +24,7 @@ elseif(WIN32)
 endif()
 
 if(WIN32)
-    target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui vjoy)
+    target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui vjoy ws2_32)
 else()
     target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)
 endif()
@@ -47,6 +47,9 @@ if(WIN32)
             $<TARGET_FILE_DIR:driver>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:SDL3_image::SDL3_image>
+            $<TARGET_FILE_DIR:driver>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${VJOY_DLL}"
             $<TARGET_FILE_DIR:driver>
     )
 endif()
