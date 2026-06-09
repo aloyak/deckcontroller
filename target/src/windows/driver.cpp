@@ -1,71 +1,94 @@
-#include "windows/driver.h"
+#include "driver.h"
 
 #include <stdexcept>
+#include <string>
 
-Driver::Driver() {
-    client = vigem_alloc();
-    if (client == nullptr) {
-        throw std::runtime_error("Failed to allocate ViGEm client");
+static constexpr LONG VJOY_AXIS_MIN  = 0x0001;
+static constexpr LONG VJOY_AXIS_MAX  = 0x8000;
+static constexpr LONG VJOY_AXIS_MID  = (VJOY_AXIS_MAX + VJOY_AXIS_MIN) / 2; // 16384
 
-    VIGEM_ERROR err = vigem_connect(client);
-    if (!VIGEM_SUCCESS(err)) {
-        vigem_free(client);
-        throw std::runtime_error("Failed to connect to ViGEm bus");
+static inline LONG StickToVJoy(int v) {
+    long shifted = static_cast<long>(v) + 32768L;           // 0 – 65535
+    return VJOY_AXIS_MIN + (shifted * (VJOY_AXIS_MAX - VJOY_AXIS_MIN)) / 65535L;
+}
+
+static inline LONG TriggerToVJoy(int v) {
+    return VJOY_AXIS_MIN + (static_cast<long>(v) * (VJOY_AXIS_MAX - VJOY_AXIS_MIN)) / 255L;
+}
+
+static inline LONG DpadToPov(DWORD buttons) {
+    bool up    = (buttons >> 8)  & 1U;
+    bool down  = (buttons >> 9)  & 1U;
+    bool left  = (buttons >> 10) & 1U;
+    bool right = (buttons >> 11) & 1U;
+
+    if (up   && right) return  4500;
+    if (right && down) return 13500;
+    if (down  && left) return 22500;
+    if (left  && up)   return 31500;
+    if (up)            return     0;
+    if (right)         return  9000;
+    if (down)          return 18000;
+    if (left)          return 27000;
+    return -1; // centred
+}
+
+Driver::Driver(UINT id) : deviceId(id) {
+    if (!vJoyEnabled()) {
+        throw std::runtime_error("vJoy driver is not enabled or not installed");
     }
 
-    target = vigem_target_x360_alloc();
-    if (target == nullptr) {
-        vigem_free(client);
-        throw std::runtime_error("Failed to allocate ViGEm target");
-
+    WORD verDll = 0, verDrv = 0;
+    if (!DriverMatch(&verDll, &verDrv)) {
+        throw std::runtime_error(
+            "vJoy DLL/driver version mismatch (DLL=" + std::to_string(verDll) +
+            " DRV=" + std::to_string(verDrv) + ")");
     }
 
-    ret = vigem_target_add(client, target);
-    if (!VIGEM_SUCCESS(ret))
-        throw std::runtime_error("Failed to add controller target");
+    VjdStat status = GetVJDStatus(deviceId);
+    switch (status) {
+        case VJD_STAT_OWN:
+            break;
+        case VJD_STAT_FREE:
+            break;
+        case VJD_STAT_BUSY:
+            throw std::runtime_error("vJoy device " + std::to_string(deviceId) +
+                                     " is already owned by another process");
+        case VJD_STAT_MISS:
+            throw std::runtime_error("vJoy device " + std::to_string(deviceId) +
+                                     " is not configured. Add it in vJoy Config.");
+        default:
+            throw std::runtime_error("vJoy device " + std::to_string(deviceId) +
+                                     " returned unknown status");
+    }
+
+    if (!AcquireVJD(deviceId)) {
+        throw std::runtime_error("Failed to acquire vJoy device " + std::to_string(deviceId));
+    }
+
+    ResetVJD(deviceId);
 }
 
 Driver::~Driver() {
-    if (target) {
-        vigem_target_remove(client, target);
-        vigem_target_free(target);
-    }
-    if (client) {
-        vigem_disconnect(client);
-        vigem_free(client);
-    }
+    RelinquishVJD(deviceId);
 }
 
 void Driver::Run(ControllerSnapshot snapshot) {
     const ControllerState& s = snapshot.connected ? snapshot.state : ControllerState{};
 
-    XUSB_REPORT report{};
-
     auto btn = [&](int bit) -> bool { return (s.buttons >> bit) & 1U; };
 
-    if (btn(0))  report.wButtons |= XUSB_GAMEPAD_A;
-    if (btn(1))  report.wButtons |= XUSB_GAMEPAD_B;
-    if (btn(2))  report.wButtons |= XUSB_GAMEPAD_X;
-    if (btn(3))  report.wButtons |= XUSB_GAMEPAD_Y;
-    if (btn(4))  report.wButtons |= XUSB_GAMEPAD_LEFT_SHOULDER;
-    if (btn(5))  report.wButtons |= XUSB_GAMEPAD_RIGHT_SHOULDER;
-    if (btn(6))  report.wButtons |= XUSB_GAMEPAD_LEFT_THUMB;
-    if (btn(7))  report.wButtons |= XUSB_GAMEPAD_RIGHT_THUMB;
-    if (btn(8))  report.wButtons |= XUSB_GAMEPAD_DPAD_UP;
-    if (btn(9))  report.wButtons |= XUSB_GAMEPAD_DPAD_DOWN;
-    if (btn(10)) report.wButtons |= XUSB_GAMEPAD_DPAD_LEFT;
-    if (btn(11)) report.wButtons |= XUSB_GAMEPAD_DPAD_RIGHT;
-    if (btn(12)) report.wButtons |= XUSB_GAMEPAD_BACK;
-    if (btn(13)) report.wButtons |= XUSB_GAMEPAD_GUIDE;
-    if (btn(14)) report.wButtons |= XUSB_GAMEPAD_START;
+    for (int bit = 0; bit <= 14; ++bit) {
+        SetBtn(btn(bit), deviceId, static_cast<UCHAR>(bit + 1));
+    }
 
-    report.sThumbLX = static_cast<SHORT>(s.leftX);
-    report.sThumbLY = static_cast<SHORT>(s.leftY);
-    report.sThumbRX = static_cast<SHORT>(s.rightX);
-    report.sThumbRY = static_cast<SHORT>(s.rightY);
+    SetAxis(StickToVJoy(s.leftX),  deviceId, HID_USAGE_X);   // Left  X
+    SetAxis(StickToVJoy(s.leftY),  deviceId, HID_USAGE_Y);   // Left  Y
+    SetAxis(StickToVJoy(s.rightX), deviceId, HID_USAGE_RX);  // Right X
+    SetAxis(StickToVJoy(s.rightY), deviceId, HID_USAGE_RY);  // Right Y
 
-    report.bLeftTrigger  = static_cast<BYTE>(s.leftTrigger);
-    report.bRightTrigger = static_cast<BYTE>(s.rightTrigger);
+    SetAxis(TriggerToVJoy(s.leftTrigger),  deviceId, HID_USAGE_Z);
+    SetAxis(TriggerToVJoy(s.rightTrigger), deviceId, HID_USAGE_RZ);
 
-    vigem_target_x360_update(client, target, report);
+    SetContPov(DpadToPov(s.buttons), deviceId, 1);
 }

@@ -3,6 +3,10 @@ include(FetchContent)
 include(SDL3)
 include(IMGUI)
 
+if(WIN32)
+    include(VJOY)
+endif()
+
 add_executable(driver
     src/main.cpp
     src/network.cpp
@@ -19,7 +23,11 @@ elseif(WIN32)
     )
 endif()
 
-target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)
+if(WIN32)
+    target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui vjoy)
+else()
+    target_link_libraries(driver PRIVATE SDL3::SDL3 SDL3_image::SDL3_image imgui)
+endif()
 
 target_include_directories(driver PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
