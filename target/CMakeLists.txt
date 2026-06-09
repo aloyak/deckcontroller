@@ -1,7 +1,6 @@
 include(FetchContent)
 
 include(SDL3)
-
 include(IMGUI)
 
 add_executable(driver
@@ -33,7 +32,6 @@ add_custom_command(TARGET driver POST_BUILD
         $<TARGET_FILE_DIR:driver>/resources
 )
 
-# TODO: check for complete windows support
 if(WIN32)
     add_custom_command(TARGET driver POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
