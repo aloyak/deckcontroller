@@ -16,6 +16,7 @@ These are the steps to take to get it working for any platform (PLEASE READ):
 2. Add the deck's side as a non-steam game and make it run with proton (tested with proton 9.0)
 3. Run the PC side and then run the deck side, in that order or the PC won't find it
 
+* **IMPORTANT NOTE**: On windows, you need to install the vjoy SDK that can be found at: https://github.com/jshafer817/vJoy/releases
 
 * currently working for a faster and nicer way to setup
 
