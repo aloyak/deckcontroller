@@ -1,7 +1,5 @@
-# DeckController
-
 <div align="center">
-  <img src="demo.png" alt="demo"  width="550"> 
+  <img src="demo.png" alt="demo"  width="600"> 
   <h1 style="font-size: 3rem; margin-top: 10px;"><strong>DeckController</strong></h1>
 </div>
 
@@ -42,3 +40,10 @@ That's it!
 
 
 **Recommended Settings:** battery life goes up to 7 hours if frame limit is set to 10 FPS/Hz, Allow Tearing, Half Rate Shading ON, Set TDP Limit to minimum (3 Watts) and set the GPU clock to 200 Mhz. As tested these settings don't have a noticeable impact on the input latency, but they do reduce the battery consumption a little bit, remember to use per-game profiles!
+
+## TODO
+
+- [ ] USB support (probably through RNDIS)
+- [ ] Improved Windows support
+- [ ] Easier setup (maybe an installer for windows and a script for the deck)
+- [ ] More controller features
