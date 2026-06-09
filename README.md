@@ -1,5 +1,10 @@
 # DeckController
 
+<div align="center">
+  <img src="demo.png" alt="demo"  width="550"> 
+  <h1 style="font-size: 3rem; margin-top: 10px;"><strong>DeckController</strong></h1>
+</div>
+
 Use your SteamDeck as a generic game controller on your PC through Wi-Fi and USB (TODO, hopefully) either in Windows or Linux with low latency and very high battery efficiency.
 
 This project is divided into two parts, the driver that runs on the PC (the `target` folder) and emulates a controller, and the client (the `deck` folder) that runs on the SteamDeck and sends the input data to the driver.
